@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+
 import { Room, Player } from './classes';
+import { io } from './server';
 
 const router = express.Router();
 
@@ -19,16 +21,22 @@ router.put('/room', (req, res) => {
 
     const leader = new Player(nickname);
 
-    const room = Room.createRoom(leader);
+    const code = Room.generateCode();
+
+    if(!code) {
+        return res.status(503).json({
+            error: 'Could not generate code'
+        });
+    }
+
+    const room = new Room(code, leader, io);
 
     res.json({
         message: 'Room created successfully',
-        code: room.state?.code,
+        code: room.code,
         nickname: leader.nickname,
-        token: leader._token
+        token: leader.token
     });
-
-    console.log('created -> ', room.state?.code);
 
 });
 
@@ -46,16 +54,14 @@ router.post('/room/:code', (req, res) => {
     }
 
     const player = new Player(nickname);
-    room.state?.addPlayer(player);
+    room.addPlayer(player);
 
     res.json({
         message: 'Player joined successfully',
-        code: room.state?.code,
+        code: room.code,
         nickname: player.nickname,
-        token: player._token
+        token: player.token
     });
-
-    console.log('joined -> ', room.state?.code, player.nickname);
 
 });
 

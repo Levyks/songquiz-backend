@@ -1,4 +1,3 @@
-import { createStore } from 'tepkijs';
 import { Room } from './classes';
 import { io } from './server';
 import playlistServices from './services/playlist';
@@ -19,15 +18,16 @@ function createRoomStore(room: Room) {
                     throw new Error(`Unknown playlist service: ${type}`);
                 }
                 
-                this.playlist = await playlistService.fetchPlaylist(id);
-                console.log('Playlist set', this.playlist);
+                this.playlist = 'teste';
+                //room.setPlaylist(await playlistService.fetchPlaylist(id));
+                //console.log('Playlist set', this.playlist);
             }
         },
         middleware: (socket, next) => {
             const { nickname, token } = socket.handshake.auth;
             const player = room.players[nickname];
             
-            if(!player || player._token !== token) {
+            if(!player || player.token !== token) {
                 next(new Error('Unauthorized'));
                 return;   
             }

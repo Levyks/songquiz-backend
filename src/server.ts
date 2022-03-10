@@ -4,6 +4,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 
 import Controller from './http';
+import { registerIOHandlers } from './socket';
 
 const app = express();
 const server = createServer(app);
@@ -14,6 +15,7 @@ const io = new Server(server, {
 });
 
 app.use(Controller);
+registerIOHandlers(io);
 
 const port = process.env.PORT || 5000;
 

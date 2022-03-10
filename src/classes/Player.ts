@@ -1,33 +1,25 @@
 import crypto from 'crypto';
 import { Socket } from 'socket.io';
-import { Room } from '.';
+import { PlayerSync } from 'typings/messages';
+import { Room, Color } from '.';
 
 export default class Player {
 
     nickname: string;
     score: number = 0;
-    color: [number, number, number];
-    _token: string;
-    _socket: Socket;
-    _room: Room;
+    color: Color;
+    token: string;
+    socket?: Socket;
+    room?: Room;
 
     constructor(nickname: string) {
         this.nickname = nickname;
-        this.color = Player.generateRandomColor();
-        this._token = Player.generateRandomToken();
+        this.color = Color.random();
+        this.token = Player.generateRandomToken();
     }
 
-    get connected() {
-        return !!this._socket?.connected;
-    }
-
-    setSocket(socket: Socket) {
-        socket.data.player = this;
-        this._socket = socket;
-        socket.on('disconnect', () => {
-            console.log(`Player ${this.nickname} disconnected`);
-            this._room?.removePlayer(this);
-        });
+    get connected(): boolean {
+        return !!this.socket?.connected;
     }
 
     static generateRandomToken() {
@@ -40,6 +32,15 @@ export default class Player {
             Math.floor(Math.random() * 255),
             Math.floor(Math.random() * 255)
         ];
+    }
+
+    getSyncData(): PlayerSync {
+        return {
+            nickname: this.nickname,
+            color: this.color.toArray(),
+            connected: this.connected,
+            score: this.score,
+        }
     }
 
 }

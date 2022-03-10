@@ -1,7 +1,11 @@
-import Room from "./Room";
-import Player from "./Player";
+import Room from './room';
+import Player from './player';
+import Color from './color';
+import Playlist from './playlist';
 
 export {
     Room,
-    Player
+    Player,
+    Color,
+    Playlist
 }

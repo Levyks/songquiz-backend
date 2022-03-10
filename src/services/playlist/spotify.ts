@@ -4,17 +4,20 @@ import PlaylistService from './generic';
 
 import { attempt } from '../../misc';
 
-import { Playlist, Track } from '../../typings';
+import { Playlist } from '../../classes';
+import { Track } from '../../typings';
 import { PlaylistResponse, TracksResponse } from '../../typings/spotify';
+import { PlaylistType } from 'classes/playlist';
 
 const TRACKS_PAGE_SIZE = 100;
 
 class SpotifyService extends PlaylistService {
 
-    private fetchAccessTokenPromise: Promise<string>;
-    private token: string = process.env.SPOTIFY_TOKEN;
+    private fetchAccessTokenPromise: Promise<string> | null;
+    private token: string | null = process.env.SPOTIFY_TOKEN || null;
 
     async fetchPlaylist(id: string): Promise<Playlist> {
+        
         const fields = encodeURIComponent('name,external_urls(spotify),images,tracks(total)');
 
         const [playlist, tracks] = await Promise.all([
@@ -22,17 +25,18 @@ class SpotifyService extends PlaylistService {
             this.fetchPlaylistTracks(id)
         ]);
         
-        return {
-            name: playlist.name,
-            tracks_count: playlist.tracks.total,
-            valid_tracks_count: tracks.length,
-            _tracks: tracks,
-            cover: playlist.images[0].url,
-            url: playlist.external_urls.spotify
-        }
+        return new Playlist(
+            playlist.name,
+            PlaylistType.Spotify,
+            playlist.tracks.total,
+            tracks,
+            playlist.images[0].url,
+            playlist.external_urls.spotify
+        )
     }
 
     async fetchPlaylistTracks(id: string, fetch_all: boolean = true, offset: number = 0): Promise<Track[]> {
+        
         const fields = encodeURIComponent('items(track(name, preview_url, external_urls, artists(external_urls,name), album(images))),total');
         
         const response: TracksResponse = await this.getRequest(`playlists/${id}/tracks?offset=${offset}&limit=${TRACKS_PAGE_SIZE}&fields=${fields}`);
@@ -45,7 +49,7 @@ class SpotifyService extends PlaylistService {
             })),
             cover: item.track.album.images[0].url,
             url: item.track.external_urls.spotify,
-            _preview: item.track.preview_url
+            preview: item.track.preview_url
         }));
 
         /**
@@ -77,7 +81,7 @@ class SpotifyService extends PlaylistService {
                 'Authorization': `Bearer ${this.token}`
             }
         }).then(r => r.data).catch((err: AxiosError) => {
-            if(err.response.status === 401 && !second_try) {
+            if(err.response?.status === 401 && !second_try) {
                 return this.fetchAccessTokenNoRep().then(() => this.getRequest(endpoint, true));
             }
             throw err;
@@ -93,8 +97,9 @@ class SpotifyService extends PlaylistService {
                 'Authorization': `Basic ${basic_token}` 
             }
         }).then(response => {
-            this.token = response.data.access_token;
-            return this.token;
+            const token: string = response.data.access_token;
+            this.token = token;
+            return token;
         });  
     }
 
@@ -105,7 +110,7 @@ class SpotifyService extends PlaylistService {
         }
     
         this.fetchAccessTokenPromise = this.fetchAccessToken().then((token) => {
-            this.fetchAccessTokenPromise = undefined;   
+            this.fetchAccessTokenPromise = null;   
             return token;
         });
     

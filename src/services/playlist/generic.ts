@@ -1,4 +1,4 @@
-import { Playlist } from '../../typings';
+import { Playlist } from '../../classes';
 
 abstract class PlaylistService {
     abstract fetchPlaylist(id: string): Promise<Playlist>

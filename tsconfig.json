@@ -6,7 +6,8 @@
     "outDir": "dist",
     "esModuleInterop": true,
     "baseUrl": "./src",
-    "noImplicitThis": true
+    "noImplicitThis": true,
+    "strictNullChecks": true
   },
   "exclude": [
     "node_modules/*"
