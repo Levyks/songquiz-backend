@@ -1,10 +1,9 @@
 
-import { Player, Playlist } from '.';
+import { Player, Playlist, Round } from '.';
 
-import { BroadcastOperator, Server } from '../typings/socket';
-import { PlayerSync, PlaylistSource, RoomSync } from "typings/messages";
-
-import '../services/playlist/spotify';
+import { BroadcastOperator, Server, Socket } from '../typings/socket';
+import { PlayerSync, PlaylistSource, RoomSync } from "../typings/messages";
+import { RoomOptions } from 'typings';
 
 const MAX_AMOUNT_OF_TRIES_CODE_GENERATION = 50000;
 const CODE_SIZE = 4;
@@ -16,17 +15,32 @@ export enum RoomStatus {
     Finished = 'finished'
 }
 
+export enum RoomGuessMode {
+    Song = 'song',
+    Artist = 'artist',
+    Both = 'both'
+}
+
 export default class Room {
 
     static rooms: {[code: string]: Room} = {};
 
     status: RoomStatus = RoomStatus.Lobby;
     players: {[id: string]: Player} = {};
-    playlist?: Playlist;
+    options: RoomOptions = Room.getDefaultOptions();
     channel: BroadcastOperator;
+
+    playlist?: Playlist;
+    
+    rounds?: Round[];
+    currentRoundIdx: number = 0;
 
     get playersArray(): Player[] {
         return Object.values(this.players);
+    }
+
+    get currentRound(): Round | undefined {
+        return this.rounds?.[this.currentRoundIdx];
     }
 
     constructor(
@@ -35,9 +49,32 @@ export default class Room {
         io: Server,
     ) {
         Room.rooms[code] = this; 
-        this.addPlayer(leader);
-
         this.channel = io.to(code);
+        this.addPlayer(leader);
+    }
+
+    startGame() {
+
+        this.rounds = [];
+        this.currentRoundIdx = 0;
+
+        for (let i = 0; i < this.options.numberOfRounds; i++) {
+            this.rounds.push(new Round(this, i));
+        }
+
+        console.log(this.rounds);
+
+        this.setStatus(RoomStatus.Starting);
+
+        setTimeout(() => {
+            this.currentRound!.start();
+            this.setStatus(RoomStatus.Playing);
+        }, 5000);
+    }
+
+    setStatus(status: RoomStatus) {
+        this.status = status;
+        this.syncStatus();
     }
 
     /** Players */
@@ -69,6 +106,7 @@ export default class Room {
 
     handleDisconnection(player: Player) {
         this.removePlayer(player);
+        this.syncPlayerDisconnection(player);
     }
 
     getPlayersSyncData(): PlayerSync[] {
@@ -96,7 +134,8 @@ export default class Room {
     /** Playlist */
 
     fetchPlaylist(source: PlaylistSource): Promise<void> {
-        return Playlist.fetch(source).then(this.setPlaylist);
+        return Playlist.fetch(source)
+            .then((playlist) => this.setPlaylist(playlist));
     }
 
     setPlaylist(playlist: Playlist) {
@@ -109,6 +148,14 @@ export default class Room {
     }
 
     /** /Playlist */
+
+    syncOptions(target: BroadcastOperator | Socket = this.channel) {
+        target.emit('sync:options', this.options);
+    }
+
+    syncStatus() {
+        this.channel.emit('sync:status', this.status);
+    }
 
     static generateCode(maxAmountOfTries: number = MAX_AMOUNT_OF_TRIES_CODE_GENERATION): string | null {
 
@@ -126,13 +173,24 @@ export default class Room {
         return code;
     }
 
+    static getDefaultOptions(): RoomOptions {
+        return {
+            numberOfRounds: 10,
+            secondsPerRound: 15,
+            guessMode: RoomGuessMode.Both,
+            showGuessesPreview: false
+        }
+    }
+
     getSyncData(): RoomSync {
         return {
             code: this.code,
+            options: this.options,
             leader: this.leader.nickname,
             players: this.playersArray.map(player => player.getSyncData()),
             status: this.status,
-            playlist: this.playlist?.getSyncData()
+            playlist: this.playlist?.getSyncData(),
+            currentRound: this.currentRound?.getSyncData()
         }
     }
 

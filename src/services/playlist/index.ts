@@ -1,4 +1,5 @@
 import PlaylistService from "./generic";
+
 import SpotifyService from "./spotify";
 
 const instances: {

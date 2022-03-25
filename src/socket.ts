@@ -1,13 +1,15 @@
-import { Room } from "./classes";
+import { Player } from "./classes";
 import { Server, Socket } from "./typings/socket";
-import { SongQuizError } from "./misc/errors";
+import { SongQuizError } from "./misc/errors"; 
+import { validateOptions, validatePlaylistSource } from "./misc/validation";
+import Room, { RoomStatus } from "./classes/room";
 
 export function registerIOHandlers(io: Server) {
     io.use(middleware);
     io.on('connection', handleConnection);
 }
 
-function middleware(socket: Socket, next: (err?: Error) => void) {
+async function middleware(socket: Socket, next: (err?: Error) => void) {
 
     const { roomCode, nickname, token } = socket.handshake.auth;
         
@@ -35,17 +37,26 @@ function handleConnection(socket: Socket) {
     if(!player || !room) return socket.disconnect(true);
 
     player.socket = socket;
-
-    socket.join(room.code);
     
     socket.on('disconnect', () => {
-        room.handleDisconnection(player);
+        console.log(`${player.nickname} disconnected`);
+        player.disconnectionTimeout = setTimeout(() => {
+            room.handleDisconnection(player);
+        }, Player.delayBeforeDisconnection);
+        room.syncPlayer(player);
     });
 
     socket.on('set:playlist', (source, callback) => {
 
         if(!room.isLeader(player)) {
-            return callback(new SongQuizError("errors.playlist.onlyLeader"));
+            return callback(new SongQuizError("errors.onlyLeader"));
+        }
+
+        const invalidParams = validatePlaylistSource(source);
+        if(invalidParams.length) {
+            return callback(new SongQuizError("errors.invalidPlaylistSource", {
+                invalidParams: invalidParams.join(', ')
+            }));
         }
 
         return room.fetchPlaylist(source)
@@ -56,6 +67,52 @@ function handleConnection(socket: Socket) {
             });
     });
 
+    socket.on('set:options', (options, callback) => {
+
+        if(!room.isLeader(player)) {
+            room.syncOptions(player.socket);
+            return callback(new SongQuizError("errors.onlyLeader"));
+        }
+
+        const invalidParams = validateOptions(options);
+        if(invalidParams.length) {
+            return callback(new SongQuizError("errors.invalidOptions", {
+                invalidParams: invalidParams.join(', ')
+            }));
+        }
+
+        room.options = options;
+        room.syncOptions();
+
+        callback();
+    });
+
+    socket.on('start:game', (callback) => {
+
+        if(!room.isLeader(player)) {
+            room.syncOptions(player.socket);
+            return callback(new SongQuizError("errors.onlyLeader"));
+        }
+
+        if(room.status !== RoomStatus.Lobby) {
+            return callback(new SongQuizError("errors.alreadyStarted"));
+        }
+
+        room.startGame();
+        callback();
+
+    });
+
     socket.emit('sync:room', room.getSyncData());
+
+    if(player.disconnectionTimeout) {
+        console.log(`canceling disconnection timeout for ${player.nickname}`);
+        clearTimeout(player.disconnectionTimeout);
+        player.disconnectionTimeout = undefined;
+    }
+
+    room.syncPlayer(player);
+
+    socket.join(room.code);
 
 }

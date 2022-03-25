@@ -9,8 +9,12 @@ export default class Player {
     score: number = 0;
     color: Color;
     token: string;
+    
     socket?: Socket;
     room?: Room;
+
+    disconnectionTimeout?: NodeJS.Timeout;
+    static delayBeforeDisconnection = 60 * 1000;
 
     constructor(nickname: string) {
         this.nickname = nickname;

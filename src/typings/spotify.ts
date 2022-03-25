@@ -11,6 +11,9 @@ interface Image {
 
 export interface PlaylistResponse {
     name: string,
+    owner: {
+        display_name: string
+    },
     external_urls: ExternalUrls,
     images: Image[],
     tracks: {
@@ -21,6 +24,7 @@ export interface PlaylistResponse {
 export interface TracksResponse {
     items: {
         track: {
+            id: string,
             name: string,
             preview_url: string,
             external_urls: ExternalUrls,

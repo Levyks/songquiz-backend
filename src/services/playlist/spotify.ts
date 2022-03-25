@@ -1,25 +1,26 @@
+
 import axios, { AxiosError } from 'axios';
 
 import PlaylistService from './generic';
 
 import { attempt } from '../../misc';
 
-import { Playlist } from '../../classes';
+import Playlist, { PlaylistType } from '../../classes/playlist';
+
 import { Track } from '../../typings';
 import { PlaylistResponse, TracksResponse } from '../../typings/spotify';
-import { PlaylistType } from 'classes/playlist';
 
 const TRACKS_PAGE_SIZE = 100;
 
-class SpotifyService extends PlaylistService {
+export default class SpotifyService {
 
     private fetchAccessTokenPromise: Promise<string> | null;
     private token: string | null = process.env.SPOTIFY_TOKEN || null;
 
     async fetchPlaylist(id: string): Promise<Playlist> {
-        
-        const fields = encodeURIComponent('name,external_urls(spotify),images,tracks(total)');
-
+    
+        const fields = encodeURIComponent('name,owner(display_name),external_urls(spotify),images,tracks(total)');
+    
         const [playlist, tracks] = await Promise.all([
             this.getRequest(`playlists/${id}?fields=${fields}`) as Promise<PlaylistResponse>,
             this.fetchPlaylistTracks(id)
@@ -27,6 +28,7 @@ class SpotifyService extends PlaylistService {
         
         return new Playlist(
             playlist.name,
+            playlist.owner.display_name,
             PlaylistType.Spotify,
             playlist.tracks.total,
             tracks,
@@ -37,11 +39,12 @@ class SpotifyService extends PlaylistService {
 
     async fetchPlaylistTracks(id: string, fetch_all: boolean = true, offset: number = 0): Promise<Track[]> {
         
-        const fields = encodeURIComponent('items(track(name, preview_url, external_urls, artists(external_urls,name), album(images))),total');
+        const fields = encodeURIComponent('items(track(id, name, preview_url, external_urls, artists(external_urls,name), album(images))),total');
         
         const response: TracksResponse = await this.getRequest(`playlists/${id}/tracks?offset=${offset}&limit=${TRACKS_PAGE_SIZE}&fields=${fields}`);
     
         const tracks = response.items.filter(item => item.track.preview_url).map<Track>(item => ({
+            id: item.track.id,
             name: item.track.name,
             artists: item.track.artists.map(artist => ({
                 name: artist.name,
@@ -118,6 +121,3 @@ class SpotifyService extends PlaylistService {
     
     }
 }
-
-
-export default SpotifyService;

@@ -37,3 +37,21 @@ export function attempt<A extends Array<any>, T>(
     }
     
 }
+
+
+export function multipleRandom<T>(arr: T[], count: number): T[] {
+
+    const idxs = new Set<number>();
+
+    while(idxs.size < count) {
+        const idx = Math.floor(Math.random() * arr.length);
+        idxs.add(idx);
+    }
+
+    return [...idxs].map(idx => arr[idx]);
+
+}
+
+export function singleRandom<T>(arr: T[]): T {
+    return multipleRandom(arr, 1)[0];
+}
