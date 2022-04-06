@@ -6,7 +6,8 @@ import {
     PlayerEventComponent, 
     PlaylistEventComponent, 
     ResultsEventComponent, 
-    RoundEventComponent 
+    RoundEventComponent, 
+    TrackEventComponent
 } from "./eventsComponents";
 
 // <ServerToClientEvents>
@@ -34,6 +35,7 @@ export type RoundClosedEvent = {
 export type RoundEndedEvent = {
     results: ResultsEventComponent,
     nextRoundStartsIn: number,
+    wasPlayed: TrackEventComponent,
 }
 
 export type RoomSyncEvent = {
@@ -42,8 +44,10 @@ export type RoomSyncEvent = {
     leader: string,
     players: PlayerEventComponent[],
     status: RoomStatus,
-    playlist?: PlaylistEventComponent
-    currentRound?: RoundEventComponent
+    history: TrackEventComponent[],
+    playlist?: PlaylistEventComponent,
+    currentRound?: RoundEventComponent,
+    nextRoundStartsIn?: number,
 }
 
 export type PlayerJoinedEvent = PlayerEventComponent;

@@ -1,3 +1,6 @@
+import { Track } from "typings";
+import { TrackEventComponent } from "typings/eventsComponents";
+
 function createLogger(name: string) {
     return console.log.bind(console, name);
 }
@@ -54,4 +57,13 @@ export function multipleRandom<T>(arr: T[], count: number): T[] {
 
 export function singleRandom<T>(arr: T[]): T {
     return multipleRandom(arr, 1)[0];
+}
+
+export function formatTrackToEvent(track: Track): TrackEventComponent {
+    return {
+        name: track.name,
+        artists: track.artists,
+        cover: track.cover,
+        url: track.url,
+    }
 }

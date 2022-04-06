@@ -1,7 +1,7 @@
 
 import { multipleRandom } from '../misc';
 import { Track } from "../typings";
-import { PlaylistSource } from "../typings/messages";
+import { PlaylistSource } from "../typings";
 import playlistServices from '../services/playlist';
 import { SongQuizError } from "../misc/errors";
 import { PlaylistEventComponent } from 'typings/eventsComponents';

@@ -12,7 +12,7 @@ import { PlaylistResponse, TracksResponse } from '../../typings/spotify';
 
 const TRACKS_PAGE_SIZE = 100;
 
-export default class SpotifyService {
+export default class SpotifyService extends PlaylistService {
 
     private fetchAccessTokenPromise: Promise<string> | null;
     private token: string | null = process.env.SPOTIFY_TOKEN || null;
@@ -75,8 +75,6 @@ export default class SpotifyService {
         if(!this.token) {
             await this.fetchAccessTokenNoRep();
         }
-
-        console.log(endpoint);
         
         return axios({
             method: 'get',

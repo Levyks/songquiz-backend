@@ -1,7 +1,7 @@
 import { PlaylistType } from "../classes/playlist";
 import { RoomGuessMode } from "../classes/room";
 import { RoomOptions } from "../typings";
-import { PlaylistSource } from "../typings/messages";
+import { PlaylistSource } from "../typings";
 
 export function validateOptions(options: RoomOptions): string[] {
 

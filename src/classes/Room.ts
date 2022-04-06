@@ -2,15 +2,17 @@
 import { Player, Playlist, Round } from '.';
 
 import { BroadcastOperator, Server } from '../typings/socket';
-import { PlaylistSource, Results, RoomOptions } from '../typings';
+import { PlaylistSource, Results, RoomOptions, Track } from '../typings';
 import { RoomSyncEvent } from '../typings/events';
 import { PlayerEventComponent } from '../typings/eventsComponents';
+import { formatTrackToEvent } from '../misc';
 
 const MAX_AMOUNT_OF_TRIES_CODE_GENERATION = 50000;
 const CODE_SIZE = 4;
+const HISTORY_SIZE = 10;
 
 const MS_BEFORE_STARTING = 3000;
-const MS_BETWEEN_ROUNDS = 10000;
+const MS_BETWEEN_ROUNDS = 5000;
 
 export enum RoomStatus {
     Lobby = 'lobby',
@@ -28,19 +30,20 @@ export enum RoomGuessMode {
 export default class Room {
 
     static rooms: {[code: string]: Room} = {};
+    
+    channel: BroadcastOperator;
+    emit: BroadcastOperator['emit'];
 
     status: RoomStatus = RoomStatus.Lobby;
     players: {[id: string]: Player} = {};
     options: RoomOptions = Room.getDefaultOptions();
-    channel: BroadcastOperator;
-    emit: BroadcastOperator['emit'];
-
     nextRoundStartsIn: number;
 
     playlist?: Playlist;
-    
     rounds?: Round[];
     currentRoundIdx: number = 0;
+
+    history: Track[] = [];
 
     get playersArray(): Player[] {
         return Object.values(this.players);
@@ -64,7 +67,7 @@ export default class Room {
     startGame() {
 
         this.rounds = [];
-        this.currentRoundIdx = 0;
+        this.currentRoundIdx = -1;
 
         for (let i = 1; i <= this.options.numberOfRounds; i++) {
             this.rounds.push(new Round(this, i));
@@ -108,8 +111,11 @@ export default class Room {
 
         this.channel.emit('round:ended', {
             results: round.results!,
-            nextRoundStartsIn: MS_BETWEEN_ROUNDS
+            nextRoundStartsIn: Math.ceil(MS_BETWEEN_ROUNDS / 1000),
+            wasPlayed: formatTrackToEvent(round.correctAnswer)
         });
+        
+        this.history = [round.correctAnswer].concat(this.history.slice(0, HISTORY_SIZE - 1));
 
         if(this.isLastRound(round)) {
             this.status = RoomStatus.Finished;
@@ -224,7 +230,9 @@ export default class Room {
             players: this.playersArray.map(player => player.getSyncData()),
             status: this.status,
             playlist: this.playlist?.getSyncData(),
-            currentRound: this.currentRound?.getSyncData(player)
+            currentRound: this.currentRound?.getSyncData(player),
+            history: this.history.map(formatTrackToEvent),
+            nextRoundStartsIn: this.nextRoundStartsIn,
         }
     }
 

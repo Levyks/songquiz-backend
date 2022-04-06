@@ -13,7 +13,7 @@ export enum RoundType {
 }
 
 const MS_CLOSING_MARGIN = 1000;
-const MS_BEFORE_RESULTS = 3000;
+const MS_BEFORE_RESULTS = 2500;
 const MS_COUNTDOWN_STEP = 100;
 
 export default class Round {
@@ -53,6 +53,7 @@ export default class Round {
     }
 
     start() {
+        console.log(`Starting round n°${this.number}`);
         this.remainingTime = this.room.options.secondsPerRound * (1000 / MS_COUNTDOWN_STEP);
         this.acceptingAnswers = true;
         this.countdown = setInterval(() => {
