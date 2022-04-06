@@ -100,6 +100,7 @@ export default class Room {
     startNextRound() {
         this.currentRoundIdx++;
         this.currentRound!.start();
+        this.status = RoomStatus.Playing;
     }
 
     handleRoundEnded(round: Round) {
