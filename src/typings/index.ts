@@ -1,11 +1,11 @@
 import { RoomGuessMode } from "../classes/room";
 
-export interface Artist {
+export type Artist = {
     name: string,
     url: string,
 }
 
-export interface Track {
+export type Track = {
     id: string,
     name: string,
     artists: Artist[],
@@ -14,13 +14,15 @@ export interface Track {
     preview: string
 }
 
-export interface RoomOptions {
+export type RoomOptions = {
     numberOfRounds: number,
     secondsPerRound: number,
     guessMode: RoomGuessMode,
     showGuessesPreview: boolean,
 }
 
-export interface Callback<R> {
-    (err?: Error, result?: R): void;
-}
+export type Results = {
+    nickname: string,
+    score: number
+}[];
+

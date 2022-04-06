@@ -1,15 +1,15 @@
 
-interface ExternalUrls {
+type ExternalUrls = {
     [key: string]: string;
 }
 
-interface Image {
+type Image = {
     url: string,
     width: number,
     height: number,
 }
 
-export interface PlaylistResponse {
+export type PlaylistResponse = {
     name: string,
     owner: {
         display_name: string
@@ -21,7 +21,7 @@ export interface PlaylistResponse {
     }
 }
 
-export interface TracksResponse {
+export type TracksResponse = {
     items: {
         track: {
             id: string,

@@ -1,12 +1,16 @@
 
 import { Player, Playlist, Round } from '.';
 
-import { BroadcastOperator, Server, Socket } from '../typings/socket';
+import { BroadcastOperator, Server } from '../typings/socket';
 import { PlayerSync, PlaylistSource, RoomSync } from "../typings/messages";
-import { RoomOptions } from 'typings';
+import { Results, RoomOptions } from 'typings';
+import { RoomSyncEvent } from 'typings/events';
 
 const MAX_AMOUNT_OF_TRIES_CODE_GENERATION = 50000;
 const CODE_SIZE = 4;
+
+const MS_BEFORE_STARTING = 3000;
+const MS_BETWEEN_ROUNDS = 10000;
 
 export enum RoomStatus {
     Lobby = 'lobby',
@@ -29,6 +33,9 @@ export default class Room {
     players: {[id: string]: Player} = {};
     options: RoomOptions = Room.getDefaultOptions();
     channel: BroadcastOperator;
+    emit: BroadcastOperator['emit'];
+
+    nextRoundStartsIn: number;
 
     playlist?: Playlist;
     
@@ -50,6 +57,7 @@ export default class Room {
     ) {
         Room.rooms[code] = this; 
         this.channel = io.to(code);
+        this.emit = this.channel.emit.bind(this.channel);
         this.addPlayer(leader);
     }
 
@@ -58,23 +66,65 @@ export default class Room {
         this.rounds = [];
         this.currentRoundIdx = 0;
 
-        for (let i = 0; i < this.options.numberOfRounds; i++) {
+        for (let i = 1; i <= this.options.numberOfRounds; i++) {
             this.rounds.push(new Round(this, i));
         }
 
-        console.log(this.rounds);
+        this.status = RoomStatus.Starting;
+        this.channel.emit('game:starting', {
+            startsIn: Math.floor(MS_BEFORE_STARTING / 1000)
+        });
 
-        this.setStatus(RoomStatus.Starting);
+        this.scheduleNextRoundStart(MS_BEFORE_STARTING);
 
-        setTimeout(() => {
-            this.currentRound!.start();
-            this.setStatus(RoomStatus.Playing);
-        }, 5000);
     }
 
-    setStatus(status: RoomStatus) {
-        this.status = status;
-        this.syncStatus();
+    scheduleNextRoundStart(delay_in_ms: number) {
+        
+        this.nextRoundStartsIn = Math.floor(delay_in_ms / 1000);
+
+        const countdown = setInterval(() => {
+            if(this.nextRoundStartsIn > 0) {
+                this.nextRoundStartsIn--;
+            } else {
+                clearInterval(countdown);
+            }
+        }, 1000);
+        
+        setTimeout(() => {
+            this.nextRoundStartsIn = 0;
+            this.startNextRound();
+        }, delay_in_ms);
+    }
+
+    startNextRound() {
+        this.currentRoundIdx++;
+        this.currentRound!.start();
+    }
+
+    handleRoundEnded(round: Round) {
+        this.updateScoresFromResults(round.results!);
+
+        this.channel.emit('round:ended', {
+            results: round.results!,
+            nextRoundStartsIn: MS_BETWEEN_ROUNDS
+        });
+
+        if(this.isLastRound(round)) {
+            this.status = RoomStatus.Finished;
+        } else {
+            this.scheduleNextRoundStart(MS_BETWEEN_ROUNDS);
+        }
+    }
+
+    updateScoresFromResults(results: Results) {
+        results.forEach(resultEntry => {
+            this.players[resultEntry.nickname].score += resultEntry.score;
+        });
+    }
+
+    isLastRound(round: Round): boolean {
+        return this.currentRoundIdx === this.rounds!.length - 1;
     }
 
     /** Players */
@@ -82,7 +132,7 @@ export default class Room {
     setLeader(player: Player) {
         if(!this.players[player.nickname]) this.addPlayer(player);
         this.leader = player;
-        this.syncLeader();
+        this.emit('room:leaderChanged', player.nickname);
     }
 
     isLeader(player: Player) {
@@ -93,40 +143,31 @@ export default class Room {
         if(!this.players[player.nickname]) {
             player.room = this;
             this.players[player.nickname] = player;
-            this.syncPlayer(player);
+            this.emit('player:joined', player.getSyncData());
         }
     }
 
     removePlayer(player: Player) {
         if(this.players[player.nickname]) {
             delete this.players[player.nickname];
-            this.syncPlayerDisconnection(player);    
+            this.emit('player:left', player.nickname);
         }
     }
 
     handleDisconnection(player: Player) {
-        this.removePlayer(player);
-        this.syncPlayerDisconnection(player);
+        //this.removePlayer(player);
+        this.emit('player:disconnected', player.nickname);
     }
 
     getPlayersSyncData(): PlayerSync[] {
         return this.playersArray.map(player => player.getSyncData());
     }
 
-    syncPlayers() {
-        this.channel.emit('sync:players', this.getPlayersSyncData());
-    }
-
-    syncLeader() {
-        this.channel.emit('sync:leader', this.leader.nickname);
-    }
-
-    syncPlayer(player: Player) {
-        this.channel.emit('sync:player', player.getSyncData());
-    }
-
-    syncPlayerDisconnection(player: Player) {
-        this.channel.emit('delete:player', player.nickname);
+    getScoresSyncData(): { [nickname: string]: number } {
+        return this.playersArray.reduce((acc, player) => {
+            acc[player.nickname] = player.score;
+            return acc;
+        }, {});
     }
 
     /** /Players */
@@ -135,7 +176,7 @@ export default class Room {
 
     fetchPlaylist(source: PlaylistSource): Promise<void> {
         return Playlist.fetch(source)
-            .then((playlist) => this.setPlaylist(playlist));
+            .then(this.setPlaylist.bind(this));
     }
 
     setPlaylist(playlist: Playlist) {
@@ -144,18 +185,10 @@ export default class Room {
     }
 
     syncPlaylist() {
-        this.channel.emit('sync:playlist', this.playlist?.getSyncData());
+        this.channel.emit('playlist:updated', this.playlist!.getSyncData());
     }
 
     /** /Playlist */
-
-    syncOptions(target: BroadcastOperator | Socket = this.channel) {
-        target.emit('sync:options', this.options);
-    }
-
-    syncStatus() {
-        this.channel.emit('sync:status', this.status);
-    }
 
     static generateCode(maxAmountOfTries: number = MAX_AMOUNT_OF_TRIES_CODE_GENERATION): string | null {
 
@@ -182,7 +215,7 @@ export default class Room {
         }
     }
 
-    getSyncData(): RoomSync {
+    getSyncData(player: Player): RoomSyncEvent {
         return {
             code: this.code,
             options: this.options,
@@ -190,7 +223,7 @@ export default class Room {
             players: this.playersArray.map(player => player.getSyncData()),
             status: this.status,
             playlist: this.playlist?.getSyncData(),
-            currentRound: this.currentRound?.getSyncData()
+            currentRound: this.currentRound?.getSyncData(player)
         }
     }
 

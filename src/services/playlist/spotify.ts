@@ -75,6 +75,8 @@ export default class SpotifyService {
         if(!this.token) {
             await this.fetchAccessTokenNoRep();
         }
+
+        console.log(endpoint);
         
         return axios({
             method: 'get',

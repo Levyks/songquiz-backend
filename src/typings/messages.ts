@@ -1,9 +1,9 @@
 import { RoomStatus } from "../classes/room";
 import { PlaylistType } from "../classes/playlist";
 import { RoundType } from "../classes/round";
-import { RoomOptions } from "typings";
+import { RoomOptions, Results } from "typings";
 
-export interface RoomSync {
+export type RoomSync = {
     code: string,
     options: RoomOptions,
     leader: string,
@@ -13,14 +13,14 @@ export interface RoomSync {
     currentRound?: RoundSync,
 }
 
-export interface PlayerSync {
+export type PlayerSync = {
     nickname: string,
     color: [number, number, number],
     connected: boolean,
     score: number,
 }
 
-export interface PlaylistSync {
+export type PlaylistSync = {
     name: string,
     creator: string,
     type: PlaylistType,
@@ -31,26 +31,32 @@ export interface PlaylistSync {
     url: string
 }
 
-export interface RoundSync {
+export type RoundSync = {
+    number: number,
     choices: string[],
     audio: string,
     type: RoundType,
     remainingTime: number,
+    acceptingAnswers: boolean,
+    hasAnswered: boolean,
+    correctAnswer?: number,
+    results?: Results
+    
 }
 
-export interface TrackSync {
+export type TrackSync = {
     name: string,
     cover: string,
     url: string,
     artists: ArtistSync[]
 }
 
-export interface ArtistSync {
+export type ArtistSync = {
     name: string
     url: string
 }
 
-export interface PlaylistSource {
+export type PlaylistSource = {
     type: PlaylistType,
     id: string
 }

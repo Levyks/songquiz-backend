@@ -1,30 +1,45 @@
 import { Player } from "../classes";
-import Room, { RoomStatus } from "../classes/room";
-import { RoomSync, PlayerSync, PlaylistSync, PlaylistSource, RoundSync } from "./messages";
+import Room from "../classes/room";
 import SocketIO from "socket.io";
-import { RoomOptions, Callback } from ".";
+import { GameStartingEvent, OptionsUpdatedEvent, PlayerJoinedEvent, PlaylistUpdatedEvent, RoomSyncEvent, RoundClosedEvent, RoundEndedEvent, RoundGuessesEvent, RoundGuessEvent, RoundStartedEvent, SetOptionsEvent, SetPlaylistEvent } from "./events";
 
-export interface ServerToClientEvents {
-    'sync:room': (data: RoomSync) => void,
-    'sync:player': (data: PlayerSync) => void,
-    'sync:players': (data: PlayerSync[]) => void,
-    'sync:round': (data: RoundSync) => void,
-    'sync:status': (data: RoomStatus) => void,
-    'sync:playlist': (data: PlaylistSync | undefined) => void
-    'sync:leader': (nickname: string) => void,
-    'sync:options': (options: RoomOptions) => void,
-    'delete:player': (nickname: string) => void,
+type Callback<R> = {
+    (err?: Error, result?: R): void;
 }
 
-export interface ClientToServerEvents {
-    'set:playlist': (data: PlaylistSource, callback: Callback<void>) => void,
-    'set:options': (data: RoomOptions, callback: Callback<void>) => void,
-    'start:game': (callback: Callback<void>) => void,
+export type ServerToClientEvents = {
+    'room:sync': (data: RoomSyncEvent) => void,
+
+    'game:starting': (data: GameStartingEvent) => void,
+    'round:started': (data: RoundStartedEvent) => void,
+    'round:guess': (data: RoundGuessEvent) => void,
+    'round:guesses': (data: RoundGuessesEvent) => void,
+    'round:closed': (data: RoundClosedEvent) => void,
+    'round:ended': (data: RoundEndedEvent) => void,
+    'game:ended': () => void,
+
+    'options:updated': (data: OptionsUpdatedEvent) => void,
+    'playlist:updated': (data: PlaylistUpdatedEvent) => void
+
+    'room:leaderChanged': (nickname: string) => void,
+
+    'player:joined': (data: PlayerJoinedEvent) => void,
+    'player:connected': (nickname: string) => void,
+    'player:disconnected': (nickname: string) => void,
+    'player:left': (nickname: string) => void,
 }
 
-export interface InterServerEvents {}
+export type ClientToServerEvents = {
+    'playlist:set': (data: SetPlaylistEvent, callback: Callback<void>) => void,
+    'options:set': (data: SetOptionsEvent, callback: Callback<void>) => void,
 
-export interface SocketData {
+    'game:start': (callback: Callback<void>) => void,
+    'round:guess': (answer: number, callback: Callback<void>) => void,
+}
+
+export type InterServerEvents = {}
+
+export type SocketData = {
     player: Player,
     room: Room
 }

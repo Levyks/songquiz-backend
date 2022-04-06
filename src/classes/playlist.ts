@@ -1,9 +1,10 @@
 
 import { multipleRandom } from '../misc';
 import { Track } from "../typings";
-import { PlaylistSource, PlaylistSync } from "../typings/messages";
+import { PlaylistSource } from "../typings/messages";
 import playlistServices from '../services/playlist';
 import { SongQuizError } from "../misc/errors";
+import { PlaylistEventComponent } from 'typings/eventsComponents';
 
 export enum PlaylistType {
     Spotify = 'spotify'
@@ -34,7 +35,7 @@ export default class Playlist {
         return Object.values(this.tracks).length;
     }
 
-    getSyncData(): PlaylistSync {
+    getSyncData(): PlaylistEventComponent {
         return {
             name: this.name,
             creator: this.creator,
