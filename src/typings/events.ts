@@ -1,6 +1,6 @@
-import { RoomStatus } from "classes/room";
-import { RoundType } from "classes/round";
-import { RoomOptions } from "typings";
+import { RoomStatus } from "../classes/room";
+import { RoundType } from "../classes/round";
+import { RoomOptions, PlaylistSource } from ".";
 import { 
     GuessEventComponent, 
     PlayerEventComponent, 
@@ -8,7 +8,6 @@ import {
     ResultsEventComponent, 
     RoundEventComponent 
 } from "./eventsComponents";
-import { PlaylistSource } from "./messages";
 
 // <ServerToClientEvents>
 

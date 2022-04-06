@@ -2,9 +2,9 @@
 import { Player, Playlist, Round } from '.';
 
 import { BroadcastOperator, Server } from '../typings/socket';
-import { PlayerSync, PlaylistSource, RoomSync } from "../typings/messages";
-import { Results, RoomOptions } from 'typings';
-import { RoomSyncEvent } from 'typings/events';
+import { PlaylistSource, Results, RoomOptions } from '../typings';
+import { RoomSyncEvent } from '../typings/events';
+import { PlayerEventComponent } from '../typings/eventsComponents';
 
 const MAX_AMOUNT_OF_TRIES_CODE_GENERATION = 50000;
 const CODE_SIZE = 4;
@@ -125,7 +125,7 @@ export default class Room {
     }
 
     isLastRound(round: Round): boolean {
-        return this.currentRoundIdx === this.rounds!.length - 1;
+        return round.number === this.rounds!.length - 1;
     }
 
     /** Players */
@@ -160,7 +160,7 @@ export default class Room {
         this.emit('player:disconnected', player.nickname);
     }
 
-    getPlayersSyncData(): PlayerSync[] {
+    getPlayersSyncData(): PlayerEventComponent[] {
         return this.playersArray.map(player => player.getSyncData());
     }
 

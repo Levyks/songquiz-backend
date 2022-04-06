@@ -1,3 +1,4 @@
+import { PlaylistType } from "../classes/playlist";
 import { RoomGuessMode } from "../classes/room";
 
 export type Artist = {
@@ -26,3 +27,7 @@ export type Results = {
     score: number
 }[];
 
+export type PlaylistSource = {
+    type: PlaylistType,
+    id: string
+}

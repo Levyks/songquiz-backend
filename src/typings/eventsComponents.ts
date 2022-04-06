@@ -42,3 +42,15 @@ export type PlaylistEventComponent = {
     cover: string,
     url: string
 }
+
+export type ArtistEventComponent = {
+    name: string,
+    url: string,
+}
+
+export type TrackEventComponent = {
+    name: string,
+    artists: ArtistEventComponent[],
+    cover: string,
+    url: string,
+}

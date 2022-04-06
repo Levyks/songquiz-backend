@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Socket } from 'socket.io';
-import { PlayerSync } from 'typings/messages';
 import { Room, Color } from '.';
+import { PlayerEventComponent } from '../typings/eventsComponents';
 
 export default class Player {
 
@@ -38,7 +38,7 @@ export default class Player {
         ];
     }
 
-    getSyncData(): PlayerSync {
+    getSyncData(): PlayerEventComponent {
         return {
             nickname: this.nickname,
             color: this.color.toArray(),
